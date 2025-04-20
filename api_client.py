@@ -5,10 +5,12 @@ import requests
 # API endpoint
 API_URL = "http://localhost:8000/predict"
 
-# Open the camera
-#cap = cv2.VideoCapture(0)  # Change the index if needed
+# Parameters to send to server
+PROMPT = "ball"
+BOX_THRESHOLD = 0.3
+TEXT_THRESHOLD = 0.25
 
-# read from a video file
+# Read from a video file
 cap = cv2.VideoCapture("example_video.mp4")
 
 # Font for drawing labels
@@ -22,25 +24,32 @@ while True:
 
     # Encode frame as JPEG
     _, img_encoded = cv2.imencode('.jpg', frame)
-    files = {'file': ('frame.jpg', img_encoded.tobytes(), 'image/jpeg')}
+    files = {
+        'file': ('frame.jpg', img_encoded.tobytes(), 'image/jpeg')
+    }
+
+    data = {
+        'prompt': PROMPT,
+        'box_threshold': str(BOX_THRESHOLD),
+        'text_threshold': str(TEXT_THRESHOLD)
+    }
 
     try:
         # Send to server
         start_time = time.time()
-        response = requests.post(API_URL, files=files)
+        response = requests.post(API_URL, files=files, data=data)
         response.raise_for_status()
         detections = response.json()["detections"]
         elapsed_time = time.time() - start_time
         print(f"Elapsed time: {elapsed_time:.2f} seconds")
 
         if response.ok:
-            print("Detections:", response.json())
+            print("Detections:", detections)
         else:
             print("Error:", response.status_code, response.text)
 
         # Draw the bounding boxes
         for det in detections:
-            # Get box in cxcywh format
             cx, cy, w, h = det["box"]
             score = det["score"]
             label = det["label"]

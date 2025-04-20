@@ -1,14 +1,10 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.responses import JSONResponse
 from groundingdino.util.inference import load_model, load_image, predict
 from PIL import Image
 import uvicorn
 import numpy as np
 import io
-
-TEXT_PROMPT = "ball"
-BOX_THRESHOLD = 0.3
-TEXT_THRESHOLD = 0.25
 
 model = load_model(
     "groundingdino/config/GroundingDINO_SwinT_OGC.py",
@@ -18,7 +14,12 @@ model = load_model(
 app = FastAPI(title="DINO Object Detection API")
 
 @app.post("/predict")
-async def detect_objects(file: UploadFile = File(...)):
+async def detect_objects(
+    file: UploadFile = File(...),
+    prompt: str = Form(...),
+    box_threshold: float = Form(0.3),
+    text_threshold: float = Form(0.25)
+):
     try:
         # Read file contents
         contents = await file.read()
@@ -27,12 +28,13 @@ async def detect_objects(file: UploadFile = File(...)):
         image_bytes = io.BytesIO(contents)
         image_source, image = load_image(image_bytes)
 
+        # Run prediction with client-sent parameters
         boxes, logits, phrases = predict(
             model=model,
             image=image,
-            caption=TEXT_PROMPT,
-            box_threshold=BOX_THRESHOLD,
-            text_threshold=TEXT_THRESHOLD
+            caption=prompt,
+            box_threshold=box_threshold,
+            text_threshold=text_threshold
         )
 
         results = []
