@@ -6,16 +6,15 @@ IF %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-REM Check if the Docker container is already running
-FOR /F "tokens=* USEBACKQ" %%F IN (`docker ps -q -f name=groundingdino_localapi_container`) DO (
-    echo Stopping existing Docker container...
-    docker stop groundingdino_localapi_container
-)
+REM Check if the Docker container already exists (regardless of state)
+docker ps -a -q -f name=groundingdino_localapi_container > tmp_container.txt
+set /p CONTAINER_ID=<tmp_container.txt
+del tmp_container.txt
 
-REM Check if an exited container with the same name exists
-FOR /F "tokens=* USEBACKQ" %%F IN (`docker ps -aq -f status=exited -f name=groundingdino_localapi_container`) DO (
-    echo Removing existing Docker container...
-    docker rm groundingdino_localapi_container
+IF NOT "%CONTAINER_ID%"=="" (
+    echo Stopping and removing existing Docker container...
+    docker stop groundingdino_localapi_container >nul 2>&1
+    docker rm groundingdino_localapi_container >nul 2>&1
 )
 
 echo Starting Docker container...
