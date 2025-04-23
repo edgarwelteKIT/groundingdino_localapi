@@ -27,15 +27,28 @@ RUN cd GroundingDINO; mkdir weights ; cd weights ; wget -q https://github.com/ID
 
 #RUN conda install -c "nvidia/label/cuda-12.1.1" cuda -y
 #ENV CUDA_HOME=$CONDA_PREFIX
-ENV CUDA_HOME=/usr/local/cuda
+#ENV CUDA_HOME=/usr/local/cuda
 
-ENV PATH=/usr/local/cuda/bin:$PATH
+#ENV PATH=/usr/local/cuda/bin:$PATH
 
 WORKDIR /opt/program/GroundingDINO
 RUN python setup.py build develop
 
-RUN pip install fastapi pillow uvicorn  python-multipart
+RUN pip install fastapi pillow uvicorn  python-multipart hf_xet Cython
 
+RUN pip uninstall -y torch torchvision torchaudio
+
+RUN pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128
+
+RUN pip install --upgrade networkx
+
+# fix the error: UserWarning: Failed to load custom C++ ops. Running on CPU mode Only!
+# solution: https://github.com/IDEA-Research/Grounded-Segment-Anything/issues/550
+RUN cd ./groundingdino/models/GroundingDINO/csrc/MsDeformAttn && \
+    sed -i 's/value.type()/value.scalar_type()/g' ms_deform_attn_cuda.cu && \
+    sed -i 's/value.scalar_type().is_cuda()/value.is_cuda()/g' ms_deform_attn_cuda.cu
+
+RUN python setup.py build develop
 
 COPY dino_api.py dino_api.py
 
